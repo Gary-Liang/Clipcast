@@ -9,10 +9,18 @@ import {
 } from "@/types/clip-detection.types";
 
 class ClipDetectionService {
-  private anthropic: Anthropic;
-  private promptTemplate: string;
+  private anthropic: Anthropic | null = null;
+  private promptTemplate: string | null = null;
 
   constructor() {
+    // Lazy initialization - don't throw during build time
+  }
+
+  private initialize() {
+    if (this.anthropic && this.promptTemplate) {
+      return; // Already initialized
+    }
+
     // Validate ANTHROPIC_API_KEY
     if (!process.env.ANTHROPIC_API_KEY) {
       throw new Error("ANTHROPIC_API_KEY is not set in environment variables");
@@ -45,6 +53,8 @@ class ClipDetectionService {
     transcript: string,
     jobId: string
   ): Promise<DetectedClip[]> {
+    this.initialize(); // Lazy initialization
+
     try {
       logger.info({ jobId }, "Detecting clips with Claude Sonnet 4.5");
 

@@ -9,10 +9,18 @@ import logger from "@/utils/logger";
 import { StorageError } from "@/utils/errors";
 
 class StorageService {
-  private s3Client: S3Client;
-  private bucketName: string;
+  private s3Client: S3Client | null = null;
+  private bucketName: string | null = null;
 
   constructor() {
+    // Lazy initialization - don't throw during build time
+  }
+
+  private initialize() {
+    if (this.s3Client && this.bucketName) {
+      return; // Already initialized
+    }
+
     if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_BUCKET_NAME) {
       throw new Error("R2 configuration is missing. Check your environment variables.");
     }
@@ -38,6 +46,8 @@ class StorageService {
    * @returns Presigned PUT URL valid for 1 hour
    */
   async generateUploadUrl(jobId: string, filename: string): Promise<string> {
+    this.initialize(); // Lazy initialization
+
     try {
       const key = `audio/${jobId}/${filename}`;
 
@@ -87,6 +97,8 @@ class StorageService {
    * @returns Presigned GET URL valid for 24 hours
    */
   async getAudioUrl(jobId: string, filename: string): Promise<string> {
+    this.initialize(); // Lazy initialization
+
     try {
       const key = `audio/${jobId}/${filename}`;
 
@@ -114,6 +126,8 @@ class StorageService {
    * @returns The storage key for the transcript
    */
   async saveTranscript(jobId: string, transcript: string): Promise<string> {
+    this.initialize(); // Lazy initialization
+
     try {
       const key = `transcripts/${jobId}/transcript.txt`;
 
@@ -159,6 +173,8 @@ class StorageService {
     key: string,
     contentType: string
   ): Promise<string> {
+    this.initialize(); // Lazy initialization
+
     try {
       // Read file from disk
       const fileBuffer = await readFile(filePath);

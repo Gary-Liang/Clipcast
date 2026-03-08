@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/cleanup.js && next dev",
     "dev:no-clean": "next dev",
-    "build": "next build",
+    "postinstall": "prisma generate",
+    "build": "prisma db push --accept-data-loss && next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "node scripts/cleanup.js",

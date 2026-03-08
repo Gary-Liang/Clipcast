@@ -11,13 +11,19 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
         <div className="flex items-center justify-between h-12">
           <SignedOut>
-            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Image src="/logo.svg" alt="Clipcast" width={193} height={56} priority className="h-14 w-auto" />
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-full">
+                BETA
+              </span>
             </Link>
           </SignedOut>
           <SignedIn>
-            <Link href="/dashboard" className="flex items-center hover:opacity-80 transition-opacity">
+            <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <Image src="/logo.svg" alt="Clipcast" width={193} height={56} priority className="h-14 w-auto" />
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-full">
+                BETA
+              </span>
             </Link>
           </SignedIn>
 

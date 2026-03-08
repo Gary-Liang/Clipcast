@@ -24,10 +24,16 @@ export default async function Home() {
                 Viral Clips
               </span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
               AI-powered platform that transforms your podcast episodes into engaging
               short-form videos for TikTok, Instagram Reels, and YouTube Shorts.
             </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800 mb-8">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <span><strong>Beta:</strong> Currently in public beta. Expect some rough edges and help us improve!</span>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/sign-up"

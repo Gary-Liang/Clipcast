@@ -1,0 +1,100 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  clerkId          String   @unique
+  email            String   @unique
+  name             String?
+  imageUrl         String?
+  stripeCustomerId String?  @unique
+  plan             Plan     @default(FREE)
+  clipsUsed        Int      @default(0)
+  clipsLimit       Int      @default(3)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  jobs             Job[]
+  clips            Clip[]
+
+  @@index([clerkId])
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+model Job {
+  id              String   @id @default(cuid())
+  filename        String
+  fileSize        Int
+  status          JobStatus @default(PENDING_UPLOAD)
+  audioUrl        String?
+  transcriptUrl   String?
+  transcript      String?  @db.Text
+  transcriptWords Json?    // Word-level timestamps from Deepgram
+  duration        Float?
+  error           String?  @db.Text
+  userId          String?  // Optional - backwards compatible
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  clips           Clip[]
+  user            User?    @relation(fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model Clip {
+  id              String   @id @default(cuid())
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String?  @db.Text
+  startTime       Float
+  endTime         Float
+  videoUrl        String?
+  status          ClipStatus @default(PENDING)
+  progress        Int      @default(0) // 0-100 percentage
+  userId          String?  // Optional - direct user link
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User?    @relation(fields: [userId], references: [id])
+
+  @@index([jobId])
+  @@index([status])
+  @@index([userId])
+}
+
+enum JobStatus {
+  PENDING_UPLOAD
+  TRANSCRIBING
+  TRANSCRIPTION_COMPLETE
+  TRANSCRIPTION_FAILED
+  DETECTING_CLIPS
+  CLIPS_DETECTED
+  FAILED
+}
+
+enum ClipStatus {
+  PENDING
+  GENERATING
+  COMPLETE
+  FAILED
+}
+
+enum Plan {
+  FREE
+  PRO
+}

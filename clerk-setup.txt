@@ -1,0 +1,10 @@
+# Clerk Setup Instructions
+
+1. Go to: https://dashboard.clerk.com
+2. Click "Create application"
+3. Copy the keys and paste them below:
+
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YOUR_KEY_HERE
+CLERK_SECRET_KEY=sk_test_YOUR_KEY_HERE
+
+Then update your .env.local file with these values.

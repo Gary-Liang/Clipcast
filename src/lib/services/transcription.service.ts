@@ -8,9 +8,17 @@ import {
 } from "@/types/transcription.types";
 
 class TranscriptionService {
-  private deepgram;
+  private deepgram: any = null;
 
   constructor() {
+    // Lazy initialization - don't throw during build time
+  }
+
+  private initialize() {
+    if (this.deepgram) {
+      return; // Already initialized
+    }
+
     if (!process.env.DEEPGRAM_API_KEY) {
       throw new Error("DEEPGRAM_API_KEY is not set in environment variables");
     }
@@ -29,6 +37,8 @@ class TranscriptionService {
     audioUrl: string,
     jobId: string
   ): Promise<TranscriptionResult> {
+    this.initialize(); // Lazy initialization
+
     try {
       logger.info({ jobId }, "Starting transcription with Deepgram");
 

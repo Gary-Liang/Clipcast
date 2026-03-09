@@ -11,7 +11,9 @@ export default function Footer() {
 
           <div className="flex gap-6 text-sm">
             <a
-              href="mailto:garyliang.cpp@gmail.com?subject=Clipcast Beta Feedback"
+              href="https://tally.so/r/jaMxLQ"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-gray-600 hover:text-teal-600 transition-colors font-medium"
             >
               📧 Send Feedback

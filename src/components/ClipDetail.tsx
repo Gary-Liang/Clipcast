@@ -31,47 +31,53 @@ interface ClipDetailProps {
 export default function ClipDetail({ initialClip }: ClipDetailProps) {
   const [clip, setClip] = useState<Clip>(initialClip);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [feedbackShown, setFeedbackShown] = useState(false);
 
-  // Show feedback toast on initial load if clip is complete and user hasn't seen it
+  // Function to show feedback toast
+  const showFeedbackToast = () => {
+    if (feedbackShown) return; // Prevent duplicates in same session
+    const hasSeenFeedback = localStorage.getItem('clipcast_feedback_shown');
+    if (hasSeenFeedback) return;
+
+    setFeedbackShown(true);
+    toast((t) => (
+      <div className="flex flex-col gap-2">
+        <div className="font-semibold">🎉 How was your first clip?</div>
+        <div className="text-sm text-gray-600">We'd love your feedback!</div>
+        <div className="flex gap-2 mt-1">
+          <a
+            href="https://tally.so/r/jaMxLQ"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 bg-teal-500 text-white text-sm font-medium rounded hover:bg-teal-600 transition-colors"
+            onClick={() => {
+              localStorage.setItem('clipcast_feedback_shown', 'true');
+              toast.dismiss(t.id);
+            }}
+          >
+            Share Feedback
+          </a>
+          <button
+            onClick={() => {
+              localStorage.setItem('clipcast_feedback_shown', 'true');
+              toast.dismiss(t.id);
+            }}
+            className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:text-gray-900"
+          >
+            Maybe Later
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 10000,
+      position: 'bottom-center',
+    });
+  };
+
+  // Show feedback toast on initial load if clip is complete
   useEffect(() => {
     if (clip.status === ClipStatus.COMPLETE) {
-      const hasSeenFeedback = localStorage.getItem('clipcast_feedback_shown');
-      if (!hasSeenFeedback) {
-        setTimeout(() => {
-          toast((t) => (
-            <div className="flex flex-col gap-2">
-              <div className="font-semibold">🎉 How was your first clip?</div>
-              <div className="text-sm text-gray-600">We'd love your feedback!</div>
-              <div className="flex gap-2 mt-1">
-                <a
-                  href="https://tally.so/r/jaMxLQ"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 bg-teal-500 text-white text-sm font-medium rounded hover:bg-teal-600 transition-colors"
-                  onClick={() => {
-                    localStorage.setItem('clipcast_feedback_shown', 'true');
-                    toast.dismiss(t.id);
-                  }}
-                >
-                  Share Feedback
-                </a>
-                <button
-                  onClick={() => {
-                    localStorage.setItem('clipcast_feedback_shown', 'true');
-                    toast.dismiss(t.id);
-                  }}
-                  className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:text-gray-900"
-                >
-                  Maybe Later
-                </button>
-              </div>
-            </div>
-          ), {
-            duration: 10000,
-            position: 'bottom-center',
-          });
-        }, 2000); // 2 second delay on page load
-      }
+      setTimeout(() => showFeedbackToast(), 2000);
     }
   }, []); // Only run once on mount
 
@@ -92,43 +98,7 @@ export default function ClipDetail({ initialClip }: ClipDetailProps) {
 
               // Show feedback toast on first successful clip completion
               if (wasGenerating && data.status === ClipStatus.COMPLETE) {
-                const hasSeenFeedback = localStorage.getItem('clipcast_feedback_shown');
-                if (!hasSeenFeedback) {
-                  setTimeout(() => {
-                    toast((t) => (
-                      <div className="flex flex-col gap-2">
-                        <div className="font-semibold">🎉 How was your first clip?</div>
-                        <div className="text-sm text-gray-600">We'd love your feedback!</div>
-                        <div className="flex gap-2 mt-1">
-                          <a
-                            href="https://tally.so/r/jaMxLQ"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 bg-teal-500 text-white text-sm font-medium rounded hover:bg-teal-600 transition-colors"
-                            onClick={() => {
-                              localStorage.setItem('clipcast_feedback_shown', 'true');
-                              toast.dismiss(t.id);
-                            }}
-                          >
-                            Share Feedback
-                          </a>
-                          <button
-                            onClick={() => {
-                              localStorage.setItem('clipcast_feedback_shown', 'true');
-                              toast.dismiss(t.id);
-                            }}
-                            className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:text-gray-900"
-                          >
-                            Maybe Later
-                          </button>
-                        </div>
-                      </div>
-                    ), {
-                      duration: 10000, // Show for 10 seconds
-                      position: 'bottom-center',
-                    });
-                  }, 1000); // Small delay so user sees the completed video first
-                }
+                setTimeout(() => showFeedbackToast(), 1000);
               }
             }
           }

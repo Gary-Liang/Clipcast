@@ -13,7 +13,8 @@ import { readFile, unlink } from "fs/promises";
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const UPLOAD_DIR = path.join(process.cwd(), '.uploads');
+// Use /tmp in serverless (Vercel), .uploads locally
+const UPLOAD_DIR = process.env.VERCEL ? '/tmp/uploads' : path.join(process.cwd(), '.uploads');
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
 
 const s3Client = new S3Client({

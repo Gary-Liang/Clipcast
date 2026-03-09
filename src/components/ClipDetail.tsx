@@ -32,6 +32,49 @@ export default function ClipDetail({ initialClip }: ClipDetailProps) {
   const [clip, setClip] = useState<Clip>(initialClip);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Show feedback toast on initial load if clip is complete and user hasn't seen it
+  useEffect(() => {
+    if (clip.status === ClipStatus.COMPLETE) {
+      const hasSeenFeedback = localStorage.getItem('clipcast_feedback_shown');
+      if (!hasSeenFeedback) {
+        setTimeout(() => {
+          toast((t) => (
+            <div className="flex flex-col gap-2">
+              <div className="font-semibold">🎉 How was your first clip?</div>
+              <div className="text-sm text-gray-600">We'd love your feedback!</div>
+              <div className="flex gap-2 mt-1">
+                <a
+                  href="https://tally.so/r/jaMxLQ"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-teal-500 text-white text-sm font-medium rounded hover:bg-teal-600 transition-colors"
+                  onClick={() => {
+                    localStorage.setItem('clipcast_feedback_shown', 'true');
+                    toast.dismiss(t.id);
+                  }}
+                >
+                  Share Feedback
+                </a>
+                <button
+                  onClick={() => {
+                    localStorage.setItem('clipcast_feedback_shown', 'true');
+                    toast.dismiss(t.id);
+                  }}
+                  className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:text-gray-900"
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </div>
+          ), {
+            duration: 10000,
+            position: 'bottom-center',
+          });
+        }, 2000); // 2 second delay on page load
+      }
+    }
+  }, []); // Only run once on mount
+
   useEffect(() => {
     // Poll for updates if clip is generating
     if (clip.status === ClipStatus.GENERATING) {

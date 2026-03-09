@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import toast from 'react-hot-toast';
 import { ClipStatus } from "@/types/job.types";
 
 interface Clip {
@@ -39,11 +40,53 @@ export default function ClipDetail({ initialClip }: ClipDetailProps) {
           const response = await fetch(`/api/clips/${clip.id}`);
           if (response.ok) {
             const data = await response.json();
+            const wasGenerating = clip.status === ClipStatus.GENERATING;
             setClip(data);
 
             // Stop polling if clip is complete or failed
             if (data.status === ClipStatus.COMPLETE || data.status === ClipStatus.FAILED) {
               clearInterval(interval);
+
+              // Show feedback toast on first successful clip completion
+              if (wasGenerating && data.status === ClipStatus.COMPLETE) {
+                const hasSeenFeedback = localStorage.getItem('clipcast_feedback_shown');
+                if (!hasSeenFeedback) {
+                  setTimeout(() => {
+                    toast((t) => (
+                      <div className="flex flex-col gap-2">
+                        <div className="font-semibold">🎉 How was your first clip?</div>
+                        <div className="text-sm text-gray-600">We'd love your feedback!</div>
+                        <div className="flex gap-2 mt-1">
+                          <a
+                            href="https://tally.so/r/jaMxLQ"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 bg-teal-500 text-white text-sm font-medium rounded hover:bg-teal-600 transition-colors"
+                            onClick={() => {
+                              localStorage.setItem('clipcast_feedback_shown', 'true');
+                              toast.dismiss(t.id);
+                            }}
+                          >
+                            Share Feedback
+                          </a>
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('clipcast_feedback_shown', 'true');
+                              toast.dismiss(t.id);
+                            }}
+                            className="px-3 py-1.5 text-gray-600 text-sm font-medium hover:text-gray-900"
+                          >
+                            Maybe Later
+                          </button>
+                        </div>
+                      </div>
+                    ), {
+                      duration: 10000, // Show for 10 seconds
+                      position: 'bottom-center',
+                    });
+                  }, 1000); // Small delay so user sees the completed video first
+                }
+              }
             }
           }
         } catch (error) {

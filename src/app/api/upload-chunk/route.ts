@@ -17,14 +17,29 @@ export const maxDuration = 300;
 const UPLOAD_DIR = process.env.VERCEL ? '/tmp/uploads' : path.join(process.cwd(), '.uploads');
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
 
-const s3Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+// Lazy initialization for S3Client
+let s3ClientInstance: S3Client | null = null;
+
+function getS3Client(): S3Client {
+  if (s3ClientInstance) {
+    return s3ClientInstance;
+  }
+
+  if (!process.env.R2_ENDPOINT || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+    throw new Error('R2 credentials not configured. Check your environment variables.');
+  }
+
+  s3ClientInstance = new S3Client({
+    region: "auto",
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+
+  return s3ClientInstance;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +107,7 @@ export async function POST(request: NextRequest) {
         ContentType: "audio/mpeg",
       });
 
+      const s3Client = getS3Client();
       await s3Client.send(command);
       logger.info({ jobId, key }, "File uploaded to R2");
 

@@ -22,7 +22,13 @@ export default function ClipUsageIndicator() {
       }
     }
 
+    // Fetch immediately
     fetchUsage();
+
+    // Poll every 5 seconds for updates
+    const interval = setInterval(fetchUsage, 5000);
+
+    return () => clearInterval(interval);
   }, [user]);
 
   if (!usage) return null;

@@ -34,29 +34,38 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError(`Clip ${clipId} not found`);
     }
 
-    // Check usage limits for free tier users
+    // Check usage limits and increment atomically for free tier users
     if (clip.job.user) {
       const user = clip.job.user;
 
-      if (user.plan === 'FREE' && user.clipsUsed >= user.clipsLimit) {
-        return NextResponse.json(
-          {
-            error: `Free tier limit reached (${user.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
-          } as ErrorResponse,
-          { status: 403 }
+      // Atomic check and increment using a transaction
+      if (user.plan === 'FREE') {
+        // Try to increment only if under limit (atomic operation)
+        const updatedUser = await prisma.user.updateMany({
+          where: {
+            id: user.id,
+            clipsUsed: { lt: user.clipsLimit }, // Only update if under limit
+          },
+          data: {
+            clipsUsed: { increment: 1 },
+          },
+        });
+
+        // If no rows updated, user hit the limit
+        if (updatedUser.count === 0) {
+          return NextResponse.json(
+            {
+              error: `Free tier limit reached (${user.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
+            } as ErrorResponse,
+            { status: 403 }
+          );
+        }
+
+        logger.info(
+          { userId: user.id, clipsUsed: user.clipsUsed + 1, plan: user.plan },
+          "User clip usage incremented"
         );
       }
-
-      // Increment usage counter
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { clipsUsed: { increment: 1 } },
-      });
-
-      logger.info(
-        { userId: user.id, clipsUsed: user.clipsUsed + 1, plan: user.plan },
-        "User clip usage incremented"
-      );
     }
 
     // Verify job has word-level timestamps

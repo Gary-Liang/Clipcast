@@ -4,7 +4,6 @@ import logger from "@/utils/logger";
 import { getErrorResponse, ValidationError, NotFoundError } from "@/utils/errors";
 import { ErrorResponse } from "@/types/api.types";
 import { ClipStatus } from "@/types/job.types";
-import { videoGenerationService } from "@/lib/services/video-generation.service";
 import storageService from "@/lib/services/storage.service";
 
 export async function POST(request: NextRequest) {
@@ -34,11 +33,10 @@ export async function POST(request: NextRequest) {
       throw new NotFoundError(`Clip ${clipId} not found`);
     }
 
-    // Check usage limits and increment atomically for free tier users
+    // Check usage limits (but don't increment yet - only increment on successful render)
     if (clip.job.user) {
       const user = clip.job.user;
 
-      // Atomic check and increment using a transaction
       if (user.plan === 'FREE') {
         // Check if we need to reset monthly usage
         const now = new Date();
@@ -67,30 +65,24 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Try to increment only if under limit (atomic operation)
-        const updatedUser = await prisma.user.updateMany({
-          where: {
-            id: user.id,
-            clipsUsed: { lt: user.clipsLimit }, // Only update if under limit
-          },
-          data: {
-            clipsUsed: { increment: 1 },
-          },
+        // Check if user is at limit (don't increment yet - wait for successful render)
+        const currentUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { clipsUsed: true, clipsLimit: true },
         });
 
-        // If no rows updated, user hit the limit
-        if (updatedUser.count === 0) {
+        if (currentUser && currentUser.clipsUsed >= currentUser.clipsLimit) {
           return NextResponse.json(
             {
-              error: `Free tier limit reached (${user.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
+              error: `Free tier limit reached (${currentUser.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
             } as ErrorResponse,
             { status: 403 }
           );
         }
 
         logger.info(
-          { userId: user.id, clipsUsed: user.clipsUsed + 1, plan: user.plan },
-          "User clip usage incremented"
+          { userId: user.id, clipsUsed: currentUser?.clipsUsed, plan: user.plan },
+          "Usage check passed - will increment on successful render"
         );
       }
     }
@@ -175,29 +167,33 @@ async function processVideoGeneration(clipId: string, jobId: string) {
 
     logger.info({ clipId, wordCount: clipWords.length }, "Extracted clip words");
 
-    // Generate video using Remotion (already uploads to R2 and returns URL)
-    const videoUrl = await videoGenerationService.generateVideo({
-      clipId,
-      clipTitle: clip.title,
-      audioUrl,
-      transcript: clipWords,
-      startTime: clip.startTime,
-      endTime: clip.endTime,
+    // Call render service (Railway or local)
+    const renderServiceUrl = process.env.RENDER_SERVICE_URL || 'http://localhost:3001';
+    const callbackUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/webhooks/render-complete`;
+
+    logger.info({ clipId, renderServiceUrl }, "Calling render service");
+
+    const renderResponse = await fetch(`${renderServiceUrl}/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clipId,
+        clipTitle: clip.title,
+        audioUrl,
+        transcript: clipWords,
+        startTime: clip.startTime,
+        endTime: clip.endTime,
+        callbackUrl,
+      }),
     });
 
-    logger.info({ clipId, videoUrl }, "Video generated and uploaded successfully");
+    if (!renderResponse.ok) {
+      const errorText = await renderResponse.text();
+      throw new Error(`Render service error: ${renderResponse.status} - ${errorText}`);
+    }
 
-    // Update clip status to COMPLETE
-    await prisma.clip.update({
-      where: { id: clipId },
-      data: {
-        status: ClipStatus.COMPLETE,
-        videoUrl,
-        progress: 100,
-      },
-    });
-
-    logger.info({ clipId }, "Video generation complete");
+    const renderResult = await renderResponse.json();
+    logger.info({ clipId, renderResult }, "Render service accepted job");
   } catch (error) {
     logger.error({ error, clipId }, "Video generation processing failed");
 

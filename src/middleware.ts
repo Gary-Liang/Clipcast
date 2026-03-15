@@ -6,6 +6,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks/clerk',
+  '/api/webhooks/render-complete',
+  '/api/clips/(.*)/progress', // Allow render service to update progress
   '/api/inngest',
 ]);
 

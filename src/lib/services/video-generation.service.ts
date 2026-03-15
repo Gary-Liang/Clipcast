@@ -28,7 +28,9 @@ class VideoGenerationService {
   ): Promise<void> {
     // Write config to a temp file to avoid command-line argument length limits
     const configFileName = `render-config-${nanoid()}.json`;
-    const configFilePath = path.resolve(process.cwd(), "public", "temp-audio", configFileName);
+    // Use /tmp in serverless (Vercel), public/temp-audio locally
+    const tempDir = process.env.VERCEL ? '/tmp' : path.resolve(process.cwd(), "public", "temp-audio");
+    const configFilePath = path.join(tempDir, configFileName);
 
     await writeFile(configFilePath, JSON.stringify(config), "utf-8");
 
@@ -147,24 +149,29 @@ class VideoGenerationService {
     try {
       logger.info({ clipId }, "Starting video generation");
 
-      // Download audio file to public directory (Remotion needs public access)
+      // Download audio file to temp directory
       logger.info({ clipId }, "Downloading audio file locally...");
-      const publicAudioDir = path.resolve(process.cwd(), "public", "temp-audio");
+      // Use /tmp in serverless (Vercel), public/temp-audio locally
+      const tempAudioDir = process.env.VERCEL ? '/tmp' : path.resolve(process.cwd(), "public", "temp-audio");
 
       // Ensure directory exists
       const fs = require('fs');
-      if (!fs.existsSync(publicAudioDir)) {
-        fs.mkdirSync(publicAudioDir, { recursive: true });
+      if (!fs.existsSync(tempAudioDir)) {
+        fs.mkdirSync(tempAudioDir, { recursive: true });
       }
 
-      localAudioPath = path.join(publicAudioDir, `${clipId}-audio.mp3`);
-      const relativeAudioPath = `temp-audio/${clipId}-audio.mp3`;
+      localAudioPath = path.join(tempAudioDir, `${clipId}-audio.mp3`);
+      const relativeAudioPath = process.env.VERCEL
+        ? localAudioPath  // In serverless, use full path
+        : `temp-audio/${clipId}-audio.mp3`;  // In local, use relative path from public/
 
       await this.downloadFile(audioUrl, localAudioPath);
       logger.info({ clipId, localAudioPath, relativeAudioPath }, "Audio downloaded successfully");
 
       // Step 1: Render video using separate Node process (avoids webpack conflicts)
-      const outputPath = path.resolve(process.cwd(), "tmp", `${clipId}.mp4`);
+      // Use /tmp in serverless (Vercel), tmp/ locally
+      const outputDir = process.env.VERCEL ? '/tmp' : path.resolve(process.cwd(), "tmp");
+      const outputPath = path.join(outputDir, `${clipId}.mp4`);
 
       const renderConfig = {
         clipTitle,

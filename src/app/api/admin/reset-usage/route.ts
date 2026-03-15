@@ -18,10 +18,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Reset clips used to 0
+    // Reset clips used to 0 and reset the date
     await prisma.user.update({
       where: { id: user.id },
-      data: { clipsUsed: 0 },
+      data: {
+        clipsUsed: 0,
+        lastResetDate: new Date(), // Reset the date to now
+      },
     });
 
     return NextResponse.json({

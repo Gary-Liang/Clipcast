@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { JobStatusResponse } from "@/types/api.types";
 import { JobStatus as JobStatusEnum } from "@/types/job.types";
 
@@ -147,7 +148,33 @@ export default function JobStatus({ jobId }: JobStatusProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate video");
+        const errorMessage = errorData.error || "Failed to generate video";
+
+        // Show toast notification for limit errors
+        if (errorMessage.includes("Free tier limit reached")) {
+          toast.error(
+            (t) => (
+              <div className="flex flex-col gap-2">
+                <div className="font-semibold">🚫 Free Tier Limit Reached</div>
+                <div className="text-sm text-gray-600">
+                  You've used all 3 free clips this month. Upgrade to Pro for unlimited clips!
+                </div>
+                <button
+                  onClick={() => toast.dismiss(t.id)}
+                  className="mt-1 px-3 py-1.5 bg-gray-800 text-white text-sm font-medium rounded hover:bg-gray-900"
+                >
+                  Got it
+                </button>
+              </div>
+            ),
+            { duration: 8000, position: "top-center" }
+          );
+        } else {
+          // Show generic error toast for other errors
+          toast.error(errorMessage, { duration: 5000 });
+        }
+
+        throw new Error(errorMessage);
       }
 
       // Refresh job status immediately

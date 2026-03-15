@@ -40,6 +40,33 @@ export async function POST(request: NextRequest) {
 
       // Atomic check and increment using a transaction
       if (user.plan === 'FREE') {
+        // Check if we need to reset monthly usage
+        const now = new Date();
+        const lastReset = new Date(user.lastResetDate);
+        const monthsSinceReset = (now.getFullYear() - lastReset.getFullYear()) * 12
+                                + (now.getMonth() - lastReset.getMonth());
+
+        // If a month or more has passed, reset usage
+        if (monthsSinceReset >= 1) {
+          logger.info(
+            { userId: user.id, lastResetDate: user.lastResetDate, monthsSinceReset },
+            "Resetting monthly clip usage"
+          );
+
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              clipsUsed: 0,
+              lastResetDate: now,
+            },
+          });
+
+          logger.info(
+            { userId: user.id, plan: user.plan },
+            "Monthly usage reset complete"
+          );
+        }
+
         // Try to increment only if under limit (atomic operation)
         const updatedUser = await prisma.user.updateMany({
           where: {

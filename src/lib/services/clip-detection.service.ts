@@ -223,8 +223,8 @@ class ClipDetectionService {
       return false;
     }
 
-    // Validate timestamp format (MM:SS or HH:MM:SS)
-    const timeRegex = /^\d{1,2}:\d{2}(:\d{2})?$/;
+    // Validate timestamp format (MM:SS or HH:MM:SS, allows 3+ digit minutes for long podcasts)
+    const timeRegex = /^\d+:\d{2}(:\d{2})?$/;
     if (!timeRegex.test(clip.start_time) || !timeRegex.test(clip.end_time)) {
       logger.warn(
         { start: clip.start_time, end: clip.end_time },

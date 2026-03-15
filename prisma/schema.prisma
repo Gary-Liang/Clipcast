@@ -19,6 +19,7 @@ model User {
   plan             Plan     @default(FREE)
   clipsUsed        Int      @default(0)
   clipsLimit       Int      @default(3)
+  lastResetDate    DateTime @default(now()) // Tracks when usage was last reset (for monthly limits)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

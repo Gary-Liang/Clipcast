@@ -18,16 +18,45 @@ export async function POST(request: NextRequest) {
 
     logger.info({ clipId }, "Starting video generation for clip");
 
-    // Verify clip exists
+    // Verify clip exists and get user info
     const clip = await prisma.clip.findUnique({
       where: { id: clipId },
       include: {
-        job: true,
+        job: {
+          include: {
+            user: true,
+          },
+        },
       },
     });
 
     if (!clip) {
       throw new NotFoundError(`Clip ${clipId} not found`);
+    }
+
+    // Check usage limits for free tier users
+    if (clip.job.user) {
+      const user = clip.job.user;
+
+      if (user.plan === 'FREE' && user.clipsUsed >= user.clipsLimit) {
+        return NextResponse.json(
+          {
+            error: `Free tier limit reached (${user.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
+          } as ErrorResponse,
+          { status: 403 }
+        );
+      }
+
+      // Increment usage counter
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { clipsUsed: { increment: 1 } },
+      });
+
+      logger.info(
+        { userId: user.id, clipsUsed: user.clipsUsed + 1, plan: user.plan },
+        "User clip usage incremented"
+      );
     }
 
     // Verify job has word-level timestamps

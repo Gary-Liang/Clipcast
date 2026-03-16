@@ -38,8 +38,8 @@ export default function FileUpload() {
     setError(null);
 
     try {
-      // Upload file in chunks (5MB each to stay under Next.js limit)
-      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+      // Upload file in chunks (4MB each to stay under Vercel's 4.5MB limit)
+      const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
       let jobId = "";
 

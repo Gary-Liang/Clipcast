@@ -111,24 +111,24 @@ async function updateClipProgress(clipId, progress) {
  * Render video using Remotion
  */
 async function renderVideo({ clipId, clipTitle, audioUrl, transcript, startTime, endTime, callbackUrl }) {
-  // Use PARENT project's public/temp-audio (where Remotion bundle will look for files)
-  const parentPublicDir = path.join(__dirname, '..', 'public', 'temp-audio');
-  const audioPath = path.join(parentPublicDir, `${clipId}-audio.mp3`);
-  const relativeAudioPath = `temp-audio/${clipId}-audio.mp3`; // Relative to parent's public/
+  // Use render service's own public/temp-audio directory
+  const publicDir = path.join(__dirname, 'public', 'temp-audio');
+  const audioPath = path.join(publicDir, `${clipId}-audio.mp3`);
+  const relativeAudioPath = `temp-audio/${clipId}-audio.mp3`; // Relative to public/
 
   const outputDir = path.join(__dirname, 'tmp');
   const outputPath = path.join(outputDir, `${clipId}.mp4`);
 
   try {
     // Ensure directories exist
-    if (!fs.existsSync(parentPublicDir)) {
-      fs.mkdirSync(parentPublicDir, { recursive: true });
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
     }
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    logger.info({ clipId, audioPath: parentPublicDir }, 'Downloading audio to parent project...');
+    logger.info({ clipId, audioPath: publicDir }, 'Downloading audio...');
     await downloadFile(audioUrl, audioPath);
 
     // Show progress: Audio downloaded
@@ -139,9 +139,9 @@ async function renderVideo({ clipId, clipTitle, audioUrl, transcript, startTime,
     // Show progress: Starting bundle
     await updateClipProgress(clipId, 10);
 
-    // Bundle the Remotion project (points to parent project)
+    // Bundle the Remotion project
     const bundleLocation = await bundle({
-      entryPoint: path.resolve(__dirname, '../src/remotion/Root.tsx'),
+      entryPoint: path.resolve(__dirname, './src/remotion/Root.tsx'),
       // This shouldn't be necessary, but for safety:
       webpackOverride: (config) => config,
     });

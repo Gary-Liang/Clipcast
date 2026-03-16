@@ -6,7 +6,6 @@ const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
-const { nanoid } = require('nanoid');
 const pino = require('pino');
 
 const logger = pino({ level: 'info' });

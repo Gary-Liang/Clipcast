@@ -57,11 +57,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid chunk data" }, { status: 400 });
     }
 
-    // Create upload directory if it doesn't exist
-    if (!existsSync(UPLOAD_DIR)) {
-      await mkdir(UPLOAD_DIR, { recursive: true });
-    }
-
     // Generate jobId on first chunk
     if (!jobId && chunkIndex === 0) {
       jobId = nanoid();
@@ -71,11 +66,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing jobId" }, { status: 400 });
     }
 
-    // Save chunk to temporary file
+    // Create directories (recursive: true won't error if they exist)
     const chunkDir = path.join(UPLOAD_DIR, jobId);
-    if (!existsSync(chunkDir)) {
-      await mkdir(chunkDir, { recursive: true });
-    }
+    await mkdir(chunkDir, { recursive: true });
 
     const chunkPath = path.join(chunkDir, `chunk-${chunkIndex}`);
     const buffer = Buffer.from(await chunk.arrayBuffer());

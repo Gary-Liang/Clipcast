@@ -3,6 +3,17 @@ import prisma from "@/lib/db/client";
 import logger from "@/utils/logger";
 import { ClipStatus } from "@/types/job.types";
 
+// Add CORS headers to allow Railway render service to call this endpoint
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -63,12 +74,12 @@ export async function POST(request: NextRequest) {
       logger.error({ clipId, error }, "Clip marked as failed");
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: corsHeaders });
   } catch (error) {
     logger.error({ error }, "Render webhook error");
     return NextResponse.json(
       { error: "Webhook processing failed" },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

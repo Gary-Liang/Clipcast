@@ -7,9 +7,19 @@ import { DetectClipsResponse, ErrorResponse } from "@/types/api.types";
 import { JobStatus, ClipStatus } from "@/types/job.types";
 import { validateDetectClipsRequest } from "@/utils/validation";
 import { timeStringToSeconds } from "@/utils/time";
+import { getCurrentUser } from "@/lib/auth/user";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+
+    // Rate limiting
+    const rateLimitCheck = await enforceRateLimit(user.id, "detectClips");
+    if (!rateLimitCheck.allowed) {
+      return rateLimitCheck.response;
+    }
+
     const body = await request.json();
 
     // Validate request
@@ -31,6 +41,14 @@ export async function POST(request: NextRequest) {
 
     if (!job) {
       throw new NotFoundError(`Job ${jobId} not found`);
+    }
+
+    // Verify job belongs to user
+    if (job.userId && job.userId !== user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
     }
 
     // Job must be in TRANSCRIPTION_COMPLETE status

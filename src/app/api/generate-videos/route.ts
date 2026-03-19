@@ -65,24 +65,36 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Check if user is at limit (don't increment yet - wait for successful render)
-        const currentUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { clipsUsed: true, clipsLimit: true },
+        // PRE-INCREMENT usage atomically to prevent race conditions
+        // This ensures users can't bypass limits by rapid-clicking
+        const updateResult = await prisma.user.updateMany({
+          where: {
+            id: user.id,
+            clipsUsed: { lt: user.clipsLimit }, // Only increment if under limit
+          },
+          data: {
+            clipsUsed: { increment: 1 },
+          },
         });
 
-        if (currentUser && currentUser.clipsUsed >= currentUser.clipsLimit) {
+        // If no rows were updated, user is at limit
+        if (updateResult.count === 0) {
+          const currentUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { clipsUsed: true, clipsLimit: true },
+          });
+
           return NextResponse.json(
             {
-              error: `Free tier limit reached (${currentUser.clipsLimit} clips). Upgrade to Pro for unlimited clips.`,
+              error: `Free tier limit reached (${currentUser?.clipsLimit || 3} clips). Upgrade to Pro for unlimited clips.`,
             } as ErrorResponse,
             { status: 403 }
           );
         }
 
         logger.info(
-          { userId: user.id, clipsUsed: currentUser?.clipsUsed, plan: user.plan },
-          "Usage check passed - will increment on successful render"
+          { userId: user.id, clipsUsed: user.clipsUsed + 1, plan: user.plan },
+          "Usage pre-incremented - will decrement on failure"
         );
       }
     }
@@ -197,6 +209,12 @@ async function processVideoGeneration(clipId: string, jobId: string) {
   } catch (error) {
     logger.error({ error, clipId }, "Video generation processing failed");
 
+    // Get clip with user info for usage refund
+    const failedClip = await prisma.clip.findUnique({
+      where: { id: clipId },
+      include: { job: { include: { user: true } } },
+    });
+
     // Update clip status to FAILED
     await prisma.clip.update({
       where: { id: clipId },
@@ -205,5 +223,20 @@ async function processVideoGeneration(clipId: string, jobId: string) {
         progress: 0,
       },
     });
+
+    // Refund usage for failed renders (FREE users only)
+    if (failedClip?.job?.user && failedClip.job.user.plan === 'FREE') {
+      await prisma.user.update({
+        where: { id: failedClip.job.user.id },
+        data: {
+          clipsUsed: { decrement: 1 },
+        },
+      });
+
+      logger.info(
+        { userId: failedClip.job.user.id, clipId },
+        "Usage refunded due to processing error"
+      );
+    }
   }
 }

@@ -11,9 +11,19 @@ import { TranscribeResponse, ErrorResponse } from "@/types/api.types";
 import { JobStatus } from "@/types/job.types";
 import transcriptionService from "@/lib/services/transcription.service";
 import storageService from "@/lib/services/storage.service";
+import { getCurrentUser } from "@/lib/auth/user";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getCurrentUser();
+
+    // Rate limiting
+    const rateLimitCheck = await enforceRateLimit(user.id, "transcribe");
+    if (!rateLimitCheck.allowed) {
+      return rateLimitCheck.response;
+    }
+
     const body = await request.json();
 
     // Validate request
@@ -26,13 +36,20 @@ export async function POST(request: NextRequest) {
 
     const { jobId } = validatedData;
 
-    // Verify job exists
+    // Verify job exists and belongs to user
     const job = await prisma.job.findUnique({
       where: { id: jobId },
     });
 
     if (!job) {
       throw new NotFoundError(`Job ${jobId} not found`);
+    }
+
+    if (job.userId && job.userId !== user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
     }
 
     logger.info({ jobId }, "Starting transcription job");

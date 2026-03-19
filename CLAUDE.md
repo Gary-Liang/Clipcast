@@ -10,7 +10,7 @@ I'm building a SaaS called "Clipcast" that converts audio-only podcasts into sho
 ## Tech Stack:
 - **Frontend:** Next.js 15 with App Router + TypeScript
 - **Backend:** Next.js API routes
-- **Database:** PostgreSQL with Prisma ORM
+- **Database:** PostgreSQL with Prisma ORM (migrating to Supabase for connection pooling)
 - **Authentication:** Clerk
 - **Transcription:** Deepgram API (with word-level timestamps)
 - **Clip Detection:** Claude Sonnet 4.5 API
@@ -83,6 +83,28 @@ I'm building a SaaS called "Clipcast" that converts audio-only podcasts into sho
 
 ## Recent Fixes:
 
+### Mar 18, 2026 - Custom Domain & Clerk Production Setup:
+- Purchased and configured clipcast.tv domain ($25/year .tv TLD)
+- Set up Vercel nameservers (avoiding Cloudflare proxy conflicts)
+- Updated all environment variables to use clipcast.tv
+- Started Clerk production setup (DNS records, Google OAuth)
+- Created comprehensive documentation (DEV_SETUP.md, SESSION_2026-03-18.md)
+
+### Mar 17, 2026 - Supabase Migration Complete:
+- Installed Supabase CLI via Scoop
+- Successfully migrated database from Railway PostgreSQL to Supabase
+- Fixed pgBouncer prepared statements issue with `?pgbouncer=true` parameter
+- Tested and verified production working without "too many clients" errors
+- See MIGRATION_LOG.md for complete details
+
+### Mar 16, 2026 - Production Deployment Fixes:
+- Fixed 413 Request Too Large: Reduced chunk size from 5MB to 4MB (Vercel limit)
+- Fixed ENOENT directory errors: Removed race condition in upload-chunk route
+- Added CORS headers to webhook endpoint for Railway → Vercel communication
+- Removed `prisma db push` from build script (was exhausting connections)
+- Identified PostgreSQL connection limit as fundamental serverless incompatibility
+- Started migration to Supabase (PostgreSQL with pgBouncer pooling)
+
 ### Feb 22, 2026 - UI Polish & Legal Pages:
 - Added Terms of Service and Privacy Policy pages with @tailwindcss/typography
 - Created Footer component with legal links (appears on all pages)
@@ -109,12 +131,20 @@ I'm building a SaaS called "Clipcast" that converts audio-only podcasts into sho
 - Increased polling frequency to 0.5s for video generation (was 3s)
 
 ## Known Issues / TODO:
+- ✅ **DATABASE MIGRATION COMPLETE** (Mar 17, 2026) - Migrated to Supabase
+  - Using connection pooling (pgBouncer) to prevent "too many clients" errors
+  - Connection string includes `?pgbouncer=true` parameter
+  - See MIGRATION_LOG.md for full details
+- 🎨 **UX: Logout feels laggy** (Mar 17, 2026)
+  - Dashboard briefly visible after logout before redirect
+  - Affects both dev and production (Clerk middleware timing)
+  - Fix: Add loading spinner on logout button click
+  - Priority: Low (UX polish, not breaking)
 - ⚠️ Inngest jobs not actively used (still fire-and-forget)
 - ⚠️ Stripe checkout flow needs end-to-end testing
 - ⚠️ Usage limit enforcement not tested
 - 📝 ToS acceptance tracking not implemented (plan exists in TOS_ACCEPTANCE_PLAN.md)
 - 📧 Email notifications not configured
-- 🚀 Deployment plan not created
 
 ## Environment Variables Required:
 ```bash

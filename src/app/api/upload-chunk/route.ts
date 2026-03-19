@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/auth/user";
 import { JobStatus } from "@/types/job.types";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { readFile, unlink } from "fs/promises";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -44,6 +45,17 @@ function getS3Client(): S3Client {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
+
+    // Rate limiting: Only check on first chunk to avoid blocking mid-upload
+    const formDataPeek = await request.clone().formData();
+    const chunkIndexPeek = parseInt(formDataPeek.get('chunkIndex') as string);
+
+    if (chunkIndexPeek === 0) {
+      const rateLimitCheck = await enforceRateLimit(user.id, "upload");
+      if (!rateLimitCheck.allowed) {
+        return rateLimitCheck.response;
+      }
+    }
 
     const formData = await request.formData();
     const chunk = formData.get('chunk') as Blob;

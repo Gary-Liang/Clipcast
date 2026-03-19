@@ -55,9 +55,13 @@ app.post('/render', async (req, res) => {
 
       // Call webhook if provided
       if (callbackUrl) {
+        const webhookSecret = process.env.RENDER_WEBHOOK_SECRET;
         fetch(callbackUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': webhookSecret ? `Bearer ${webhookSecret}` : ''
+          },
           body: JSON.stringify({
             clipId,
             videoUrl,
@@ -74,9 +78,13 @@ app.post('/render', async (req, res) => {
 
       // Call webhook with error if provided
       if (callbackUrl) {
+        const webhookSecret = process.env.RENDER_WEBHOOK_SECRET;
         fetch(callbackUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': webhookSecret ? `Bearer ${webhookSecret}` : ''
+          },
           body: JSON.stringify({
             clipId,
             status: 'failed',

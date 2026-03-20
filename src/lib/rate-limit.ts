@@ -8,11 +8,11 @@ const RATE_LIMITS = {
     PRO: 100,
   },
   transcribe: {
-    FREE: 5,
+    FREE: 10, // Increased from 5 for better UX
     PRO: 50,
   },
   detectClips: {
-    FREE: 5,
+    FREE: 10, // Increased from 5 for better UX
     PRO: 50,
   },
 } as const;
@@ -97,14 +97,28 @@ export async function enforceRateLimit(
   const result = await checkRateLimit(userId, action);
 
   if (!result.allowed) {
+    const minutesUntilReset = Math.ceil(
+      (result.resetAt.getTime() - Date.now()) / 60000
+    );
+
+    // User-friendly action names
+    const actionNames: Record<RateLimitAction, string> = {
+      upload: "file uploads",
+      transcribe: "transcriptions",
+      detectClips: "clip detections",
+    };
+
     return {
       allowed: false,
       response: new Response(
         JSON.stringify({
           error: "Rate limit exceeded",
-          message: `You've exceeded the rate limit for ${action}. Please try again later.`,
+          message: `You've reached your limit of ${result.limit} ${actionNames[action]} per hour. Try again in ${minutesUntilReset} minute${minutesUntilReset === 1 ? '' : 's'}, or upgrade to Pro for ${result.limit === 5 ? '10x' : '10x'} higher limits!`,
           limit: result.limit,
+          remaining: 0,
           resetAt: result.resetAt.toISOString(),
+          resetIn: `${minutesUntilReset} minutes`,
+          upgradeUrl: "/pricing", // TODO: Add pricing page
         }),
         {
           status: 429,

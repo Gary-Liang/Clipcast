@@ -105,5 +105,10 @@ app.post('/render', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  logger.info({ port: PORT }, 'Render service started');
+  logger.info({
+    port: PORT,
+    hasWebhookSecret: !!process.env.RENDER_WEBHOOK_SECRET,
+    webhookSecretLength: process.env.RENDER_WEBHOOK_SECRET?.length,
+    nextPublicUrl: process.env.NEXT_PUBLIC_URL,
+  }, 'Render service started');
 });

@@ -56,11 +56,23 @@ app.post('/render', async (req, res) => {
       // Call webhook if provided
       if (callbackUrl) {
         const webhookSecret = process.env.RENDER_WEBHOOK_SECRET;
+        const authHeader = webhookSecret ? `Bearer ${webhookSecret}` : '';
+
+        logger.info({
+          clipId,
+          callbackUrl,
+          hasSecret: !!webhookSecret,
+          secretLength: webhookSecret?.length,
+          secretPrefix: webhookSecret?.substring(0, 10),
+          authHeaderLength: authHeader.length,
+          authHeaderPrefix: authHeader.substring(0, 20),
+        }, 'Sending webhook (success)');
+
         fetch(callbackUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': webhookSecret ? `Bearer ${webhookSecret}` : ''
+            'Authorization': authHeader
           },
           body: JSON.stringify({
             clipId,
@@ -79,11 +91,23 @@ app.post('/render', async (req, res) => {
       // Call webhook with error if provided
       if (callbackUrl) {
         const webhookSecret = process.env.RENDER_WEBHOOK_SECRET;
+        const authHeader = webhookSecret ? `Bearer ${webhookSecret}` : '';
+
+        logger.info({
+          clipId,
+          callbackUrl,
+          hasSecret: !!webhookSecret,
+          secretLength: webhookSecret?.length,
+          secretPrefix: webhookSecret?.substring(0, 10),
+          authHeaderLength: authHeader.length,
+          authHeaderPrefix: authHeader.substring(0, 20),
+        }, 'Sending webhook (error)');
+
         fetch(callbackUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': webhookSecret ? `Bearer ${webhookSecret}` : ''
+            'Authorization': authHeader
           },
           body: JSON.stringify({
             clipId,

@@ -26,18 +26,42 @@ export async function getCurrentUser() {
       return null;
     }
 
-    user = await prisma.user.create({
-      data: {
-        clerkId: userId,
-        email: clerkUser.emailAddresses[0].emailAddress,
-        name: clerkUser.firstName && clerkUser.lastName
-          ? `${clerkUser.firstName} ${clerkUser.lastName}`
-          : clerkUser.firstName || null,
-        imageUrl: clerkUser.imageUrl,
-      },
-    });
+    try {
+      user = await prisma.user.create({
+        data: {
+          clerkId: userId,
+          email: clerkUser.emailAddresses[0].emailAddress,
+          name: clerkUser.firstName && clerkUser.lastName
+            ? `${clerkUser.firstName} ${clerkUser.lastName}`
+            : clerkUser.firstName || null,
+          imageUrl: clerkUser.imageUrl,
+        },
+      });
 
-    console.log('Auto-created user from Clerk:', userId);
+      console.log('Auto-created user from Clerk:', userId);
+    } catch (error: any) {
+      // Handle race condition: user might exist with same email but different clerkId
+      // Or webhook already created the user
+      if (error.code === 'P2002') {
+        // Try to find by email and update clerkId
+        const email = clerkUser.emailAddresses[0].emailAddress;
+        user = await prisma.user.findUnique({
+          where: { email },
+        });
+
+        // Update clerkId if user exists but has different/missing clerkId
+        if (user && user.clerkId !== userId) {
+          user = await prisma.user.update({
+            where: { email },
+            data: { clerkId: userId },
+          });
+          console.log('Updated user clerkId:', userId);
+        }
+      } else {
+        // Re-throw other errors
+        throw error;
+      }
+    }
   }
 
   return user;

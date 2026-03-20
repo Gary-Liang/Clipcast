@@ -29,8 +29,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Debug logging
+    logger.info({
+      authHeaderPresent: !!authHeader,
+      authHeaderLength: authHeader?.length,
+      expectedSecretLength: expectedSecret.length,
+      authHeaderPrefix: authHeader?.substring(0, 10),
+    }, "Webhook auth debug");
+
     if (!authHeader || authHeader !== `Bearer ${expectedSecret}`) {
-      logger.warn({ ip: request.ip }, "Unauthorized webhook attempt");
+      logger.warn({
+        ip: request.ip,
+        authHeader: authHeader?.substring(0, 20) + '...',
+        expected: `Bearer ${expectedSecret}`.substring(0, 20) + '...',
+      }, "Unauthorized webhook attempt");
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401, headers: corsHeaders }

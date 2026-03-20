@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const pino = require('pino');
+const axios = require('axios');
 const { renderVideo } = require('./render');
 
 const logger = pino({ level: 'info' });
@@ -68,30 +69,32 @@ app.post('/render', async (req, res) => {
           authHeaderPrefix: authHeader.substring(0, 20),
         }, 'Sending webhook (success)');
 
-        fetch(callbackUrl, {
-          method: 'POST',
+        axios.post(callbackUrl, {
+          clipId,
+          videoUrl,
+          status: 'completed',
+          duration
+        }, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': authHeader
-          },
-          body: JSON.stringify({
-            clipId,
-            videoUrl,
-            status: 'completed',
-            duration
-          }),
+          }
         })
-          .then(async (response) => {
-            const responseText = await response.text();
+          .then((response) => {
             logger.info({
               clipId,
               status: response.status,
               statusText: response.statusText,
-              responseBody: responseText.substring(0, 200),
+              responseBody: JSON.stringify(response.data).substring(0, 200),
             }, 'Webhook response received');
           })
           .catch(err => {
-            logger.error({ clipId, error: err.message, stack: err.stack }, 'Webhook failed');
+            logger.error({
+              clipId,
+              error: err.message,
+              status: err.response?.status,
+              responseData: err.response?.data,
+            }, 'Webhook failed');
           });
       }
     }).catch((error) => {
@@ -113,30 +116,32 @@ app.post('/render', async (req, res) => {
           authHeaderPrefix: authHeader.substring(0, 20),
         }, 'Sending webhook (error)');
 
-        fetch(callbackUrl, {
-          method: 'POST',
+        axios.post(callbackUrl, {
+          clipId,
+          status: 'failed',
+          error: error.message,
+          duration
+        }, {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': authHeader
-          },
-          body: JSON.stringify({
-            clipId,
-            status: 'failed',
-            error: error.message,
-            duration
-          }),
+          }
         })
-          .then(async (response) => {
-            const responseText = await response.text();
+          .then((response) => {
             logger.info({
               clipId,
               status: response.status,
               statusText: response.statusText,
-              responseBody: responseText.substring(0, 200),
+              responseBody: JSON.stringify(response.data).substring(0, 200),
             }, 'Error webhook response received');
           })
           .catch(err => {
-            logger.error({ clipId, error: err.message, stack: err.stack }, 'Error webhook failed');
+            logger.error({
+              clipId,
+              error: err.message,
+              status: err.response?.status,
+              responseData: err.response?.data,
+            }, 'Error webhook failed');
           });
       }
     });

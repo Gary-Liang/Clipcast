@@ -80,9 +80,19 @@ app.post('/render', async (req, res) => {
             status: 'completed',
             duration
           }),
-        }).catch(err => {
-          logger.error({ clipId, error: err.message }, 'Webhook failed');
-        });
+        })
+          .then(async (response) => {
+            const responseText = await response.text();
+            logger.info({
+              clipId,
+              status: response.status,
+              statusText: response.statusText,
+              responseBody: responseText.substring(0, 200),
+            }, 'Webhook response received');
+          })
+          .catch(err => {
+            logger.error({ clipId, error: err.message, stack: err.stack }, 'Webhook failed');
+          });
       }
     }).catch((error) => {
       const duration = Date.now() - startTime;
@@ -115,9 +125,19 @@ app.post('/render', async (req, res) => {
             error: error.message,
             duration
           }),
-        }).catch(err => {
-          logger.error({ clipId, error: err.message }, 'Error webhook failed');
-        });
+        })
+          .then(async (response) => {
+            const responseText = await response.text();
+            logger.info({
+              clipId,
+              status: response.status,
+              statusText: response.statusText,
+              responseBody: responseText.substring(0, 200),
+            }, 'Error webhook response received');
+          })
+          .catch(err => {
+            logger.error({ clipId, error: err.message, stack: err.stack }, 'Error webhook failed');
+          });
       }
     });
 
